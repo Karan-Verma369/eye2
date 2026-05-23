@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BlinkCare — Emergency</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.18.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-landmarks-detection@0.0.1/dist/face-landmarks-detection.min.js"></script>
+
+  <style>
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Inter', sans-serif;
+      padding: 1rem;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
+      border-radius: 24px;
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+      padding: 2rem;
+      max-width: 500px;
+      width: 100%;
+      text-align: center;
+      animation: fadeIn 0.6s ease;
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+
+    h2 {
+      font-size: 1.3rem;
+      color: #4b5563;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+
+    p {
+      color: #374151;
+      margin: 0.25rem 0;
+      font-size: 0.95rem;
+    }
+
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      font-weight: 600;
+      border: none;
+      border-radius: 16px;
+      padding: 0.9rem 1.5rem;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s, background 0.3s;
+      margin-top: 1.2rem;
+      width: 100%;
+      outline: none;
+    }
+
+    button:hover, button.active {
+      transform: scale(1.03);
+      box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+      background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    }
+
+    #sos-status {
+      margin-top: 1rem;
+      font-weight: 600;
+      color: #4b5563;
+      font-size: 0.95rem;
+      background: rgba(102, 126, 234, 0.08);
+      padding: 0.75rem;
+      border-radius: 12px;
+    }
+
+    .blink {
+      animation: blink 1.2s infinite;
+      color: #e11d48;
+      font-weight: 700;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    #camera-feed {
+      width: 100%;
+      max-width: 300px;
+      border-radius: 12px;
+      margin: 1rem auto;
+      display: block;
+    }
+
+    #blink-status {
+      margin: 0.5rem 0;
+      padding: 0.5rem;
+      border-radius: 8px;
+      font-weight: 600;
+    }
+
+    .blink-detected {
+      background-color: #dcfce7;
+      color: #166534;
+    }
+
+    .no-blink {
+      background-color: #fef2f2;
+      color: #dc2626;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="card">
+    <h1>🚨 BlinkCare Emergency</h1>
+    <h2 class="blink">Emergency Mode Active</h2>
+
+    <!-- Blink Detection Status -->
+    <div id="blink-status" class="no-blink">
+      🔴 Blink Detection: Starting...
+    </div>
+
+    <!-- Camera Feed -->
+    <video id="camera-feed" autoplay playsinline></video>
+
+    <!-- User data loaded from database -->
+    <div id="user-info" class="text-left mt-4">
+      <p><strong>👤 Patient Name:</strong> <span id="patient-name">Loading...</span></p>
+      <p><strong>🩺 Condition:</strong> <span id="condition">Loading...</span></p>
+      <p><strong>💉 Blood Group:</strong> <span id="blood-group">Loading...</span></p>
+      <p><strong>📞 Contact:</strong> <span id="contact">Loading...</span></p>
+      <p><strong>👩‍⚕ Doctor:</strong> <span id="doctor">Loading...</span></p>
+    </div>
+
+    <!-- Main Buttons -->
+    <div id="main-buttons">
+      <button id="send-btn" onclick="showConfirm()">📡 Send SOS Alert</button>
+    </div>
+
+    <!-- Confirmation Section (Initially Hidden) -->
+    <div id="confirm-section" class="hidden">
+      <h2>⚠ Confirm SOS Send?</h2>
+      <button id="confirm-yes" onclick="sendSOS()">✅ Yes, Confirm</button>
+      <button id="confirm-no" onclick="goBack()">🔙 No, Go Back</button>
+    </div>
+
+    <div id="sos-status">Awaiting SOS trigger...</div>
+  </div>
+
+  <script>
+    let blinkMode = true;
+    let currentIndex = 0;
+    let buttons = [];
+    let model = null;
+    let video = null;
+    let isBlinking = false;
+    let blinkCount = 0;
+    let lastBlinkTime = 0;
+    let userProfileData = null;
+    const BLINK_THRESHOLD = 0.3;
+    const BLINK_TIMEOUT = 2000;
+
+    function loadUserProfile() {
+      try {
+        const currentUser = localStorage.getItem('currentUser');
+        const authToken = localStorage.getItem('authToken');
+        
+        if (!authToken || !currentUser) {
+          console.error('No authentication found');
+          window.location.href = 'login.html';
+          return;
+        }
+
+        fetch(`/api/user?username=${encodeURIComponent(currentUser)}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.success && data.user) {
+              const userData = data.user;
+              
+              document.getElementById('patient-name').textContent = currentUser || 'Unknown';
+              document.getElementById('condition').textContent = userData.medical_condition || 'N/A';
+              document.getElementById('blood-group').textContent = userData.blood_group || 'N/A';
+              document.getElementById('contact').textContent = userData.contact_number || 'N/A';
+              document.getElementById('doctor').textContent = userData.doctor_name || 'N/A';
+
+              userProfileData = userData;
+            } else {
+              console.error('Failed to load user profile from database');
+              window.location.href = 'login.html';
+            }
+          })
+          .catch(err => {
+            console.error('Error loading profile:', err);
+            alert('Failed to load user profile. Make sure server is running on http://localhost:3000');
+            window.location.href = 'login.html';
+          });
+      } catch (error) {
+        console.error('Error loading profile:', error);
+        window.location.href = 'login.html';
+      }
+    }
+
+    // Initialize blink detection
+    async function initBlinkDetection() {
+      try {
+        video = document.getElementById('camera-feed');
+        const statusEl = document.getElementById('blink-status');
+        
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { width: 640, height: 480 } 
+        });
+        video.srcObject = stream;
+
+        model = await faceLandmarksDetection.load(
+          faceLandmarksDetection.SupportedPackages.mediapipeFacemesh,
+          { maxFaces: 1 }
+        );
+
+        statusEl.textContent = "🟢 Blink Detection: Active - Blink to select";
+        statusEl.className = "blink-detected";
+
+        detectBlinks();
+        
+      } catch (error) {
+        console.error('Error initializing blink detection:', error);
+        document.getElementById('blink-status').textContent = 
+          "❌ Camera access denied. Using keyboard fallback (press 'B').";
+        initKeyboardFallback();
+      }
+    }
+
+    // Blink detection using facial landmarks
+    async function detectBlinks() {
+      if (!model || !video) return;
+
+      const predictions = await model.estimateFaces({
+        input: video,
+        returnTensors: false,
+        flipHorizontal: false,
+        predictIrises: false
+      });
+
+      if (predictions.length > 0) {
+        const keypoints = predictions[0].scaledMesh;
+        
+        const leftEyeRatio = calculateEyeAspectRatio(keypoints, [33, 160, 158, 133, 153, 144]);
+        const rightEyeRatio = calculateEyeAspectRatio(keypoints, [362, 385, 387, 263, 373, 380]);
+        
+        const avgEyeRatio = (leftEyeRatio + rightEyeRatio) / 2;
+        
+        if (avgEyeRatio < BLINK_THRESHOLD && !isBlinking) {
+          isBlinking = true;
+          blinkCount++;
+          lastBlinkTime = Date.now();
+          
+          document.getElementById('blink-status').textContent = 
+            `👁 Blink Detected! (${blinkCount}) - Keep blinking for selection`;
+          document.getElementById('blink-status').className = "blink-detected";
+          
+          handleBlinkAction();
+          
+        } else if (avgEyeRatio >= BLINK_THRESHOLD) {
+          isBlinking = false;
+        }
+      }
+
+      requestAnimationFrame(detectBlinks);
+    }
+
+    function calculateEyeAspectRatio(keypoints, eyePoints) {
+      const [p1, p2, p3, p4, p5, p6] = eyePoints.map(i => keypoints[i]);
+      
+      const A = distance(p2, p6);
+      const B = distance(p3, p5);
+      
+      const C = distance(p1, p4);
+      
+      return (A + B) / (2.0 * C);
+    }
+
+    function distance(point1, point2) {
+      return Math.sqrt(
+        Math.pow(point1[0] - point2[0], 2) + 
+        Math.pow(point1[1] - point2[1], 2)
+      );
+    }
+
+    function handleBlinkAction() {
+      if (!blinkMode) return;
+
+      const currentTime = Date.now();
+      
+      if (currentTime - lastBlinkTime < 1000 && blinkCount >= 2) {
+        if (buttons[currentIndex]) {
+          buttons[currentIndex].click();
+          blinkCount = 0;
+          speak("Button activated");
+        }
+      } else {
+        currentIndex = (currentIndex + 1) % buttons.length;
+        highlightButton();
+        speak(`Button ${currentIndex + 1} selected`);
+      }
+    }
+
+    function initKeyboardFallback() {
+      document.addEventListener("keydown", (e) => {
+        if (e.key.toLowerCase() === "b" && buttons[currentIndex]) {
+          buttons[currentIndex].click();
+        } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+          currentIndex = (currentIndex + 1) % buttons.length;
+          highlightButton();
+        } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+          currentIndex = (currentIndex - 1 + buttons.length) % buttons.length;
+          highlightButton();
+        }
+      });
+    }
+
+    function updateButtonList() {
+      buttons = Array.from(document.querySelectorAll("button"));
+    }
+
+    function highlightButton() {
+      buttons.forEach(btn => btn.classList.remove("active"));
+      if (buttons[currentIndex]) {
+        buttons[currentIndex].classList.add("active");
+        buttons[currentIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+
+    function showConfirm() {
+      document.getElementById("main-buttons").classList.add("hidden");
+      document.getElementById("confirm-section").classList.remove("hidden");
+      speak("Are you sure you want to send SOS?");
+      updateButtonList();
+      currentIndex = 0;
+      highlightButton();
+    }
+
+    function goBack() {
+      document.getElementById("confirm-section").classList.add("hidden");
+      document.getElementById("main-buttons").classList.remove("hidden");
+      speak("Returning to main screen.");
+      updateButtonList();
+      currentIndex = 0;
+      highlightButton();
+    }
+
+    async function sendSOS() {
+      const statusEl = document.getElementById("sos-status");
+      statusEl.textContent = "📍 Getting location and sending SOS...";
+      speak("Sending SOS now.");
+
+      const currentUser = localStorage.getItem('currentUser');
+      const userData = userProfileData || {};
+
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+          const lat = pos.coords.latitude;
+          const lon = pos.coords.longitude;
+
+          const sosData = {
+            data: [
+              currentUser || 'Unknown',
+              userData.medical_condition || 'N/A',
+              userData.contact_number || 'N/A',
+              lat.toString(),
+              lon.toString()
+            ]
+          };
+
+          try {
+            const response = await fetch("http://127.0.0.1:7860/api/predict/", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(sosData)
+            });
+
+            const result = await response.json();
+
+            if (result?.data?.[0]?.status === "success") {
+              statusEl.textContent = "✅ SOS sent successfully!";
+              speak("SOS sent successfully. Help is on the way.");
+            } else {
+              statusEl.textContent = "⚠ Failed to send SOS. Try again.";
+              speak("SOS sending failed. Please try again.");
+            }
+          } catch (err) {
+            console.error(err);
+            statusEl.textContent = "❌ Network error while sending SOS.";
+            speak("Network error while sending SOS.");
+          }
+        });
+      } else {
+        statusEl.textContent = "❌ Geolocation not supported.";
+        speak("Location access not supported on this device.");
+      }
+    }
+
+    function speak(text) {
+      const msg = new SpeechSynthesisUtterance(text);
+      msg.lang = "en-IN";
+      window.speechSynthesis.speak(msg);
+    }
+
+    window.onload = function() {
+      loadUserProfile();
+      updateButtonList();
+      highlightButton();
+      initBlinkDetection();
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BlinkCare — Login</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 1rem;
+    }
+
+    .container {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
+      border-radius: 24px;
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+      padding: 2.5rem;
+      max-width: 450px;
+      width: 100%;
+      animation: slideIn 0.6s ease;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+      text-align: center;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #6b7280;
+      font-size: 0.95rem;
+      margin-bottom: 2rem;
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    label {
+      display: block;
+      color: #374151;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      font-size: 0.95rem;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="tel"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 0.75rem;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    input[type="text"]:focus,
+    input[type="email"]:focus,
+    input[type="password"]:focus,
+    input[type="tel"]:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 0.9rem;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      outline: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      margin-top: 0.5rem;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #374151;
+      margin-top: 0.5rem;
+    }
+
+    .btn-secondary:hover {
+      background: #d1d5db;
+      transform: translateY(-2px);
+    }
+
+    .toggle-form {
+      text-align: center;
+      margin-top: 1.5rem;
+      color: #6b7280;
+      font-size: 0.95rem;
+    }
+
+    .toggle-form button {
+      background: none;
+      border: none;
+      color: #667eea;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: underline;
+      padding: 0;
+    }
+
+    .toggle-form button:hover {
+      color: #764ba2;
+    }
+
+    .error {
+      background: #fee2e2;
+      color: #991b1b;
+      padding: 0.75rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+      display: none;
+    }
+
+    .error.show {
+      display: block;
+    }
+
+    .success {
+      background: #dcfce7;
+      color: #166534;
+      padding: 0.75rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+      display: none;
+    }
+
+    .success.show {
+      display: block;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .medical-fields {
+      background: #f9fafb;
+      padding: 1rem;
+      border-radius: 12px;
+      margin: 1rem 0;
+    }
+
+    .medical-fields h3 {
+      color: #374151;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🚑 BlinkCare</h1>
+    <div class="subtitle">Emergency Medical Platform</div>
+
+    <!-- Login Form -->
+    <div id="login-form" class="login-section">
+      <div id="login-error" class="error"></div>
+      <div id="login-success" class="success"></div>
+
+      <div class="form-group">
+        <label for="login-username">Username</label>
+        <input type="text" id="login-username" placeholder="Enter your username" />
+      </div>
+
+      <div class="form-group">
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" placeholder="Enter your password" />
+      </div>
+
+      <button class="btn btn-primary" onclick="handleLogin()">Sign In</button>
+
+      <div class="toggle-form">
+        Don't have an account? 
+        <button onclick="toggleForm()">Create one</button>
+      </div>
+    </div>
+
+    <!-- Registration Form -->
+    <div id="register-form" class="register-section hidden">
+      <div id="register-error" class="error"></div>
+      <div id="register-success" class="success"></div>
+
+      <div class="form-group">
+        <label for="register-username">Username</label>
+        <input type="text" id="register-username" placeholder="Choose a username" />
+      </div>
+
+      <div class="form-group">
+        <label for="register-password">Password</label>
+        <input type="password" id="register-password" placeholder="Create a password" />
+      </div>
+
+      <div class="form-group">
+        <label for="register-confirm-password">Confirm Password</label>
+        <input type="password" id="register-confirm-password" placeholder="Confirm password" />
+      </div>
+
+      <!-- Medical information fields for registration -->
+      <div class="medical-fields">
+        <h3>📋 Medical Information</h3>
+
+        <div class="form-group">
+          <label for="blood-group">Blood Group</label>
+          <select id="blood-group">
+            <option value="">Select Blood Group</option>
+            <option value="O+">O+</option>
+            <option value="O-">O-</option>
+            <option value="A+">A+</option>
+            <option value="A-">A-</option>
+            <option value="B+">B+</option>
+            <option value="B-">B-</option>
+            <option value="AB+">AB+</option>
+            <option value="AB-">AB-</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="medical-condition">Medical Condition</label>
+          <textarea id="medical-condition" placeholder="e.g., Asthma, Diabetes, Heart condition..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="contact-number">Contact Number</label>
+          <input type="tel" id="contact-number" placeholder="Your phone number" />
+        </div>
+
+        <div class="form-group">
+          <label for="doctor-name">Doctor Name (Emergency Contact)</label>
+          <input type="text" id="doctor-name" placeholder="Your doctor's name" />
+        </div>
+
+        <div class="form-group">
+          <label for="allergies">Allergies</label>
+          <textarea id="allergies" placeholder="Any known allergies..."></textarea>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" onclick="handleRegister()">Create Account</button>
+
+      <div class="toggle-form">
+        Already have an account? 
+        <button onclick="toggleForm()">Sign in</button>
+      </div>
+    </div>
+  </div>
+  <script>
+  // Temporary line for debugging
+  localStorage.clear();  // Clears all saved user/session data
+</script>
+
+  <script>
+    function simpleHash(str) {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+      }
+      return hash.toString(36);
+    }
+
+    function toggleForm() {
+      const loginForm = document.getElementById('login-form');
+      const registerForm = document.getElementById('register-form');
+
+      loginForm.classList.toggle('hidden');
+      registerForm.classList.toggle('hidden');
+
+      // Clear previous messages
+      clearMessages();
+    }
+
+    function clearMessages() {
+      document.getElementById('login-error').classList.remove('show');
+      document.getElementById('login-success').classList.remove('show');
+      document.getElementById('register-error').classList.remove('show');
+      document.getElementById('register-success').classList.remove('show');
+    }
+
+    function showError(elementId, message) {
+      const errorEl = document.getElementById(elementId);
+      errorEl.textContent = message;
+      errorEl.classList.add('show');
+    }
+
+    function showSuccess(elementId, message) {
+      const successEl = document.getElementById(elementId);
+      successEl.textContent = message;
+      successEl.classList.add('show');
+    }
+
+    function handleLogin() {
+      const username = document.getElementById('login-username').value.trim();
+      const password = document.getElementById('login-password').value;
+
+      if (!username || !password) {
+        showError('login-error', 'Please fill in all fields');
+        return;
+      }
+
+      fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          // Store auth token and username
+          const token = 'token_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+          localStorage.setItem('authToken', token);
+          localStorage.setItem('currentUser', username);
+          localStorage.setItem('userData', JSON.stringify(data.user));
+
+          showSuccess('login-success', 'Login successful! Redirecting...');
+          setTimeout(() => {
+            window.location.href = 'index.html';
+          }, 1500);
+        } else {
+          showError('login-error', data.message || 'Login failed');
+        }
+      })
+      .catch(err => {
+        showError('login-error', 'Connection error. Make sure server is running on http://localhost:3000');
+        console.error('Login error:', err);
+      });
+    }
+
+    function handleRegister() {
+      const username = document.getElementById('register-username').value.trim();
+      const password = document.getElementById('register-password').value;
+      const confirmPassword = document.getElementById('register-confirm-password').value;
+      const bloodGroup = document.getElementById('blood-group').value;
+      const medicalCondition = document.getElementById('medical-condition').value.trim();
+      const contactNumber = document.getElementById('contact-number').value.trim();
+      const doctorName = document.getElementById('doctor-name').value.trim();
+      const allergies = document.getElementById('allergies').value.trim();
+
+      if (!username || !password || !confirmPassword) {
+        showError('register-error', 'Username and password are required');
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        showError('register-error', 'Passwords do not match');
+        return;
+      }
+
+      if (password.length < 6) {
+        showError('register-error', 'Password must be at least 6 characters');
+        return;
+      }
+
+      if (!bloodGroup) {
+        showError('register-error', 'Please select your blood group');
+        return;
+      }
+
+      fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username,
+          password,
+          blood_group: bloodGroup,
+          medical_condition: medicalCondition,
+          contact_number: contactNumber,
+          doctor_name: doctorName,
+          allergies
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          showSuccess('register-success', 'Account created successfully! Signing in...');
+          setTimeout(() => {
+            document.getElementById('login-username').value = username;
+            document.getElementById('login-password').value = document.getElementById('register-password').value;
+            handleLogin();
+          }, 1500);
+        } else {
+          showError('register-error', data.message || 'Registration failed');
+        }
+      })
+      .catch(err => {
+        showError('register-error', 'Connection error. Make sure server is running on http://localhost:3000');
+        console.error('Register error:', err);
+      });
+    }
+
+    // Check if user is already logged in
+   // window.addEventListener('load', () => {
+     // const authToken = localStorage.getItem('authToken');
+      //if (authToken) {
+       // window.location.href = 'index.html';
+      //}
+    //});
+  </script>
+</body>
+</html>
